@@ -12,8 +12,10 @@ Adds an avatar suggestions list to your BuddyPress powered community.
 == Description ==
 
 BP Avatar Suggestions is a BuddyPress plugin to allow network admin to add a list of suggested avatars in order to let the members of his network to select one of the avatars from their profile page.
-<b>NB</b> : in the user's "change avatar" profile page, the list is only showing if the user has not uploaded an avatar yet.
 This plugin was inspired by Dan (Network Admin of the French BuddyPress community).
+
+<b>NB</b> : in the user's "change avatar" profile page, the list is only showing if the user has not uploaded an avatar yet.
+
 
 http://vimeo.com/54191926
 
