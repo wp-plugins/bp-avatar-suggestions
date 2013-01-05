@@ -1,6 +1,6 @@
 === BP Avatar Suggestions ===
 Contributors: imath
-Donate link: http://imath.owni.fr/
+Donate link: http://imathi.eu/donations/
 Tags: BuddyPress, avatar
 Requires at least: 3.4.2
 Tested up to: 3.5
