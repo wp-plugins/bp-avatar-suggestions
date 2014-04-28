@@ -2,9 +2,9 @@
 Contributors: imath
 Donate link: http://imathi.eu/donations/
 Tags: BuddyPress, avatar
-Requires at least: 3.4.2
-Tested up to: 3.5
-Stable tag: 1.0
+Requires at least: 3.9
+Tested up to: 3.9
+Stable tag: 1.1.0
 License: GPLv2
 
 Adds an avatar suggestions list to your BuddyPress powered community.
@@ -42,10 +42,16 @@ Please add an issue <a href="https://github.com/imath/bp-avatar-suggestions/issu
 
 == Changelog ==
 
+= 1.1.0 =
+* Requires BuddyPress 2.0
+
 = 1.0 =
 * Plugin birth..
 
 == Upgrade Notice ==
+
+= 1.1.0 =
+* Requires BuddyPress 2.0
 
 = 1.0 =
 no upgrades, just a first version..
