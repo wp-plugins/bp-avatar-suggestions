@@ -7,7 +7,7 @@ Tested up to: 4.1.1
 Stable tag: 1.2.0
 License: GPLv2
 
-Adds an avatar suggestions list to your BuddyPress powered community.
+Avatar suggestions for the members and the groups of your BuddyPress powered community.
 
 == Description ==
 
