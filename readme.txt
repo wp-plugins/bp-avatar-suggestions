@@ -2,22 +2,20 @@
 Contributors: imath
 Donate link: http://imathi.eu/donations/
 Tags: BuddyPress, avatar
-Requires at least: 3.9
-Tested up to: 3.9
-Stable tag: 1.1.0
+Requires at least: 4.1
+Tested up to: 4.1.1
+Stable tag: 1.2.0
 License: GPLv2
 
 Adds an avatar suggestions list to your BuddyPress powered community.
 
 == Description ==
 
-BP Avatar Suggestions is a BuddyPress plugin to allow network admin to add a list of suggested avatars in order to let the members of his network to select one of the avatars from their profile page.
+BP Avatar Suggestions is a BuddyPress plugin to allow administrators to add a list of suggested avatars in order to let the members or the groups of their community to select one of the avatars from their profile page in case of users or their manage page in case of groups.
 This plugin was inspired by Dan (Network Admin of the French BuddyPress community).
 
-<b>NB</b> : in the user's "change avatar" profile page, the list is only showing if the user has not uploaded an avatar yet.
 
-
-http://vimeo.com/54191926
+http://vimeo.com/120889562
 
 
 == Installation ==
@@ -34,13 +32,20 @@ Please add an issue <a href="https://github.com/imath/bp-avatar-suggestions/issu
 
 == Screenshots ==
 
-1. Setting to allow/ disallow users to choose a suggested avatar.
-2. Adding an avatar to the suggestion list.
-3. this plugin uses media uploader to store avatars.
-4. Example of a suggested avatar list.
-5. User's profile page.
+1. Settings to allow/ disallow users/groups to choose a suggested avatar.
+2. The avatar suggestions Administration screen.
+3. Example for a user.
+4. Example for a group.
 
 == Changelog ==
+
+= 1.2.0 =
+* requires WordPress 4.1.
+* requires BuddyPress 2.2.
+* Uses a draft post to attach the avatar to.
+* Improves the interface so that it is now possible to bulk upload and delete avatar suggestions.
+* Improves the Avatar suggestions "selector", so that it can be used even if BuddyPress user uploads are disabled.
+* Adds support for Groups avatar suggestions.
 
 = 1.1.0 =
 * Requires BuddyPress 2.0
@@ -49,6 +54,10 @@ Please add an issue <a href="https://github.com/imath/bp-avatar-suggestions/issu
 * Plugin birth..
 
 == Upgrade Notice ==
+
+= 1.2.0 =
+* Requires BuddyPress 2.2
+* Please make sure to backup your database before upgrading the plugin.
 
 = 1.1.0 =
 * Requires BuddyPress 2.0
