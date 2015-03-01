@@ -3,9 +3,9 @@
 Plugin Name: BP Avatar Suggestions
 Plugin URI: http://imathi.eu/tag/bp-avatar-suggestions/
 Description: Adds an avatar suggestions list to your BuddyPress powered community
-Version: 1.1.0
-Requires at least: 3.9
-Tested up to: 3.9
+Version: 1.2.0
+Requires at least: 4.1
+Tested up to: 4.1.1
 License: GNU/GPL 2
 Author: imath
 Author URI: http://imathi.eu/
@@ -14,7 +14,7 @@ Domain Path: /languages/
 */
 
 // Exit if accessed directly
-if ( ! defined( 'ABSPATH' ) ) exit;
+defined( 'ABSPATH' ) || exit;
 
 class Avatar_Suggestions {
 	/**
@@ -35,7 +35,7 @@ class Avatar_Suggestions {
 	 *
 	 * @var      string
 	 */
-	public static $required_bp_version = '2.0';
+	public static $required_bp_version = '2.2';
 
 	/**
 	 * BuddyPress config.
@@ -55,11 +55,11 @@ class Avatar_Suggestions {
 	 *
 	 * @var      string
 	 */
-	public static $plugin_name = 'BP Avatar Suggestions'; 
+	public static $plugin_name = 'BP Avatar Suggestions';
 
 	/**
 	 * Initialize the plugin
-	 * 
+	 *
 	 * @package BP Avatar Suggestions
 	 * @since   1.1.0
 	 */
@@ -92,14 +92,14 @@ class Avatar_Suggestions {
 
 	/**
 	 * Sets some globals for the plugin
-	 * 
+	 *
 	 * @package BP Avatar Suggestions
 	 * @since   1.1.0
 	 */
 	private function setup_globals() {
 
 		/** Versions & domain ***********************************/
-		$this->version       = '1.1.0';
+		$this->version       = '1.2.0';
 		$this->domain        = 'bp-avatar-suggestions';
 
 		/** Paths ***********************************************/
@@ -112,8 +112,11 @@ class Avatar_Suggestions {
 		/** Urls ***********************************************/
 		$this->plugin_url    = plugin_dir_url( $this->file );
 		$this->plugin_js     = trailingslashit( $this->plugin_url . 'js' );
+		$this->plugin_css    = trailingslashit( $this->plugin_url . 'css' );
 
-		$this->is_active     = (int) bp_get_option( 'bp-disable-avatar-suggestions', 0 );
+		$this->avatar_post_id = bp_get_option( 'bp_avatar_suggestions_post_id', 0 );
+		$this->enable_users   = bp_get_option( 'bp-avatar-suggestions-enable-users', 1 );
+		$this->enable_groups  = bp_get_option( 'bp-avatar-suggestions-enable-groups', 1 );
 	}
 
 	/**
@@ -123,31 +126,46 @@ class Avatar_Suggestions {
 	 * @since   1.1.0
 	 */
 	private function includes() {
-		if ( self::bail() || ! bp_is_active( 'xprofile' ) )
+		if ( self::bail() || ( ! bp_is_active( 'xprofile' ) && ! bp_is_active( 'groups' ) ) ) {
 			return;
+		}
 
 		require( $this->includes_dir . 'bp-avatar-suggestions-front.php' );
 
-		if( is_admin() )
+		if ( bp_is_active( 'groups' ) && ! empty( $this->enable_groups ) ) {
+			require( $this->includes_dir . 'bp-avatar-suggestions-groups.php' );
+		}
+
+		if ( is_admin() ) {
 			require( $this->includes_dir . 'bp-avatar-suggestions-admin.php' );
+		}
 	}
 
 	/**
 	 * Sets the key hooks to add an action or a filter to
-	 * 
+	 *
 	 * @package BP Avatar Suggestions
 	 * @since   1.1.0
 	 */
 	private function setup_hooks() {
 
-		if ( ! self::bail() && bp_is_active( 'xprofile' ) ) {
+		if ( ! self::bail() && ( bp_is_active( 'xprofile' ) || bp_is_active( 'groups' ) ) ) {
 			// Load Front
-			if ( ! empty( $this->is_active ) )
-				add_action( 'bp_loaded', 'bp_avatar_suggestions_front', 20 );
+			add_action( 'bp_loaded', 'bp_avatar_suggestions_front', 20 );
+
+			// Make sure to intercept a deleted avatar
+			add_action( 'delete_attachment', array( $this, 'cleanup_avatar_data'  ), 10, 1 );
+
+			// Make sure to intercept an edited avatar
+			add_action( 'edit_attachment',   array( $this, 'is_avatar_suggestion' ), 10, 1 );
+
+			// Make sure to intercept a new avatar
+			add_action( 'add_attachment',    array( $this, 'is_avatar_suggestion' ), 10, 1 );
 
 			// Load Admin
-			if( is_admin() )
+			if ( is_admin() ) {
 				add_action( 'bp_loaded', 'bp_avatar_suggestions_admin', 20 );
+			}
 
 			// loads the languages..
 			add_action( 'bp_init', array( $this, 'load_textdomain' ), 5 );
@@ -156,12 +174,69 @@ class Avatar_Suggestions {
 			// Display a warning message in network admin or admin
 			add_action( self::$bp_config['network_active'] ? 'network_admin_notices' : 'admin_notices', array( $this, 'warning' ) );
 		}
-		
+	}
+
+	/**
+	 * Remove all avatar datas related to an attachment
+	 *
+	 * @package BP Avatar Suggestions
+	 * @since   1.2.0
+	 */
+	public function cleanup_avatar_data( $attachment_id = 0 ) {
+		// All avatar suggestions are saved in the root blog
+		if ( ! bp_is_root_blog() || empty( $attachment_id ) ) {
+			return;
+		}
+
+		$attachement = get_post( $attachment_id );
+
+		// Make sure it's an avatar suggestion
+		if ( empty( $attachement->post_parent ) || $this->avatar_post_id != $attachement->post_parent ) {
+			return;
+		}
+
+		// Get the url of the avatar
+		$avatar_url = wp_get_attachment_image_src( $attachment_id, array( 150, 150 ) );
+
+		// Delete all user metas having the $avatar_url
+		delete_metadata( 'user', false, 'user_avatar_choice', $avatar_url[0], true );
+
+		if ( bp_is_active( 'groups' ) ) {
+			// Delete all user metas having the $avatar_url
+			groups_delete_groupmeta( false, 'group_avatar_choice', $avatar_url[0], true );
+		}
+	}
+
+	/**
+	 * Make sure an avatar suggestion has a type
+	 *
+	 * @package BP Avatar Suggestions
+	 * @since   1.2.0
+	 */
+	public function is_avatar_suggestion( $attachment_id = 0 ) {
+		// All avatar suggestions are saved in the root blog
+		if ( ! bp_is_root_blog() || empty( $attachment_id ) ) {
+			return;
+		}
+
+		$attachement = get_post( $attachment_id );
+
+		// Make sure it's an avatar suggestion
+		if ( empty( $attachement->post_parent ) || $this->avatar_post_id != $attachement->post_parent ) {
+			return;
+		}
+
+		$has_meta = get_post_meta( $attachment_id, '_bpas_avatar_type', true );
+
+		// Update to the 'All type'
+		if ( empty( $has_meta ) ) {
+			update_post_meta( $attachment_id, '_bpas_avatar_type', 1 );
+		}
 	}
 
 	/**
 	 * Display a warning message to admin
-	 * 
+	 *
 	 * @package BP Avatar Suggestions
 	 * @since   1.1.0
 	 */
@@ -182,10 +257,6 @@ class Avatar_Suggestions {
 			$warnings[] = sprintf( __( '%s and BuddyPress need to share the same network configuration.', 'bp-avatar-suggestions' ), self::$plugin_name );
 		}
 
-		if ( ! bp_is_active( 'xprofile' ) ) {
-			$warnings[] = sprintf( __( '%s requires the BuddyPress extended profile component', 'bp-avatar-suggestions' ), self::$plugin_name );
-		}
-
 		if ( ! empty( $warnings ) ) :
 		?>
 		<div id="message" class="error">
@@ -201,7 +272,7 @@ class Avatar_Suggestions {
 
 	/**
 	 * Checks BuddyPress version
-	 * 
+	 *
 	 * @package BP Avatar Suggestions
 	 * @since   1.1.0
 	 */
@@ -215,7 +286,7 @@ class Avatar_Suggestions {
 
 	/**
 	 * Checks if your plugin's config is similar to BuddyPress
-	 * 
+	 *
 	 * @package BP Avatar Suggestions
 	 * @since   1.1.0
 	 */
@@ -226,20 +297,21 @@ class Avatar_Suggestions {
 		 * network_status : BuddyPress & your plugin share the same network status
 		 */
 		self::$bp_config = array(
-			'blog_status'    => false, 
-			'network_active' => false, 
-			'network_status' => true 
+			'blog_status'    => false,
+			'network_active' => false,
+			'network_status' => true,
 		);
 
 		if ( get_current_blog_id() == bp_get_root_blog_id() ) {
 			self::$bp_config['blog_status'] = true;
 		}
-		
+
 		$network_plugins = get_site_option( 'active_sitewide_plugins', array() );
 
 		// No Network plugins
-		if ( empty( $network_plugins ) )
+		if ( empty( $network_plugins ) ) {
 			return self::$bp_config;
+		}
 
 		$plugin_basename = plugin_basename( __FILE__ );
 
@@ -248,11 +320,12 @@ class Avatar_Suggestions {
 
 		// Are they active on the network ?
 		$network_active = array_diff( $check, array_keys( $network_plugins ) );
-		
+
 		// If result is 1, your plugin is network activated
 		// and not BuddyPress or vice & versa. Config is not ok
-		if ( count( $network_active ) == 1 )
+		if ( count( $network_active ) == 1 ) {
 			self::$bp_config['network_status'] = false;
+		}
 
 		self::$bp_config['network_active'] = isset( $network_plugins[ $plugin_basename ] );
 
@@ -270,8 +343,9 @@ class Avatar_Suggestions {
 
 		$config = self::config_check();
 
-		if ( ! self::version_check() || ! $config['blog_status'] || ! $config['network_status'] )
+		if ( ! self::version_check() || ( ! $config['blog_status'] && ! $config['network_status'] ) ) {
 			$retval = true;
+		}
 
 		return $retval;
 	}
@@ -281,7 +355,7 @@ class Avatar_Suggestions {
 	 *
 	 * @package BP Avatar Suggestions
 	 * @since   1.1.0
-	 * 
+	 *
 	 * @uses get_locale() to get the language of WordPress config
 	 * @uses load_texdomain() to load the translation if any is available for the language
 	 */
@@ -300,7 +374,7 @@ class Avatar_Suggestions {
 		// Look in local /wp-content/plugins/bp-avatar-suggestions/languages/ folder
 		load_textdomain( $this->domain, $mofile_local );
 	}
-	
+
 }
 
 // BuddyPress is loaded and initialized, let's start !
@@ -310,7 +384,7 @@ function bp_avatar_suggestions() {
 	if ( empty( $bp->extend ) ) {
 		$bp->extend = new StdClass();
 	}
-	
+
 	$bp->extend->avatar_suggestions = Avatar_Suggestions::start();
 }
 add_action( 'bp_include', 'bp_avatar_suggestions' );
